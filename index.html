@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Autorizar pago – Khipu Inside Web</title>
+
+  <!-- SDK de Khipu Inside Web -->
+  <script src="https://js.khipu.com/v1/kws.js"></script>
+
+  <!-- Estilos generales -->
+  <style>
+    /* Reset básico */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Tipografía y fondo */
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    /* Contenedor principal */
+    .container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 480px;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 1.5rem;
+      color: #4a4a4a;
+      text-align: center;
+    }
+
+    /* Formulario */
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+
+    label span {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #8347AD;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    /* Botón principal */
+    button {
+      margin-top: 1.25rem;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background-color: #8347AD;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background-color: #6b3483;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* Mensaje de error */
+    #error {
+      margin-top: 1rem;
+      color: #c0392b;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    /* Contenedor para el modal/iframe de Khipu */
+    #khipu-web-root {
+      margin-top: 2rem;
+    }
+
+    /* Pie de página */
+    .footer {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #777;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Contenedor centrado -->
+  <div class="container">
+    <!-- Título -->
+    <h1>Autorizar pago en aplicación Web</h1>
+
+    <!-- Formulario de pago -->
+    <form id="pay-form">
+      <!-- Campo: monto -->
+      <label for="amount">
+        <span>Monto (CLP):</span>
+        <input
+          type="number"
+          id="amount"
+          value="1000"
+          min="1"
+          required
+          title="Ingresa un monto en pesos chilenos"
+        />
+      </label>
+
+      <!-- Campo: asunto/motivo -->
+      <label for="subject">
+        <span>Motivo / Asunto:</span>
+        <input
+          type="text"
+          id="subject"
+          placeholder="Ej. Pago de suscripción"
+          required
+        />
+      </label>
+
+      <!-- Campo: descripción opcional -->
+      <label for="body">
+        <span>Descripción (opcional):</span>
+        <textarea
+          id="body"
+          rows="3"
+          placeholder="Detalle adicional…"
+        ></textarea>
+      </label>
+
+      <!-- Botón de envío -->
+      <button type="submit">Iniciar pago</button>
+    </form>
+
+    <!-- Mensaje de error -->
+    <div id="error"></div>
+
+    <!-- Aquí montará el modal o iframe de Khipu Inside Web -->
+    <div id="khipu-web-root"></div>
+  </div>
+
+  <!-- Pie de página opcional -->
+  <div class="footer">
+    Demo estático – integración <strong>Khipu Inside Web</strong>
+  </div>
+
+  <!-- SCRIPT: lógica de creación de pago y lanzamiento del modal -->
+  <script>
+    // ——————————————————————————
+    // 1) Configura tus credenciales de modo desarrollador
+    // ——————————————————————————
+    const API_KEY     = '9a8ff582-eaec-4d66-a201-75fd1e122b6d';
+    const RECEIVER_ID = 499137;
+
+    // ——————————————————————————
+    // 2) Referencias a elementos del DOM
+    // ——————————————————————————
+    const form      = document.getElementById('pay-form');
+    const amountI   = document.getElementById('amount');
+    const subjectI  = document.getElementById('subject');
+    const bodyI     = document.getElementById('body');
+    const errorEl   = document.getElementById('error');
+    const mountEl   = document.getElementById('khipu-web-root');
+
+    // ——————————————————————————
+    // 3) Escuchar evento al enviar el formulario
+    // ——————————————————————————
+    form.addEventListener('submit', async e => {
+      e.preventDefault();           // Prevenir recarga de página
+      errorEl.textContent = '';     // Limpiar errores previos
+      mountEl.innerHTML  = '';      // Limpiar cualquier modal previo
+
+      // Leer valores del formulario
+      const amount  = Number(amountI.value);
+      const subject = subjectI.value.trim();
+      const body    = bodyI.value.trim();
+
+      // Validaciones básicas
+      if (isNaN(amount) || amount < 1) {
+        errorEl.textContent = '⚠️ Ingresa un monto válido (≥ 1 CLP)';
+        return;
+      }
+      if (!subject) {
+        errorEl.textContent = '⚠️ El motivo (asunto) es obligatorio';
+        return;
+      }
+
+      try {
+        // ——————————————————————————
+        // 4) Crear intención de pago en la API de Khipu (v3)
+        // ——————————————————————————
+        const resp = await fetch('https://payment-api.khipu.com/v3/payments', {
+          method : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key'    : API_KEY
+          },
+          body: JSON.stringify({
+            receiver_id : RECEIVER_ID,
+            amount,
+            currency    : 'CLP',
+            subject,               // Asunto dinámico
+            ...(body && { body }), // Descripción opcional
+            return_url  : 'success.html', // Carga local relativa
+            cancel_url  : 'cancel.html'   // Carga local relativa
+          })
+        });
+
+        // ——————————————————————————
+        // 5) Parsear respuesta y mostrarla en consola
+        // ——————————————————————————
+        console.log('Response object:', resp);
+        const data = await resp.json();
+        console.log('Response JSON:', data);
+
+        // Manejar errores HTTP
+        if (!resp.ok) {
+          throw new Error(data.error || `Error ${resp.status}`);
+        }
+
+        // ——————————————————————————
+        // 6) Extraer payment_id y lanzar modal
+        // ——————————————————————————
+        const { payment_id } = data;
+        console.log('payment_id:', payment_id);
+
+        if (!payment_id) {
+          throw new Error('No se recibió el payment_id de la operación');
+        }
+
+        // Iniciar Khipu Inside Web en modo modal
+        new Khipu().startOperation(
+          payment_id,
+          result => {
+            console.log('Callback invoked:', result);
+            // Aquí podrías redirigir manualmente a result.exitUrl si quisieras.
+          },
+          {
+            mountElement: mountEl,
+            modal       : true,
+            modalOptions: { maxWidth:450, maxHeight:860 },
+            options     : {
+              style       : {
+                primaryColor: '#8347AD',
+                fontFamily  : 'Roboto'
+              },
+              skipExitPage: false
+            }
+          }
+        );
+
+      } catch (err) {
+        // Mostrar error al usuario y en consola
+        console.error('❌ Error creando pago:', err);
+        errorEl.textContent = '⚠️ ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
