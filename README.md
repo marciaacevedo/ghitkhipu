@@ -1,5 +1,5 @@
 
-# Khipu Inside Web – Demo de Pago Integrado
+# ghitkhipu  - Khipu Inside Web – Demo de Pago Integrado
 
 Este repositorio contiene un ejemplo de integración **front-end puro** de la pasarela de pagos chilena [Khipu](https://khipu.com) utilizando su modalidad **Inside Web** (SDK JavaScript embebido en modal/iframe). Permite crear intenciones de pago desde un formulario HTML y lanzar el flujo de autorización directamente en la misma página.
 
